@@ -16,6 +16,43 @@
 | **Object Detection** | **YOLOv8** | 실시간 객체 탐지 및 정밀 분류를 수행하는 메인 지도 학습 모델로 활용 |
 | **Labeling Tool** | **LabelImg** | 바운딩 박스 기반의 학습 데이터셋 라벨링 수행 |
 
+## 파이프라인
+mermaid
+sequenceDiagram
+    participant Data as Image Data
+    participant Unsup as Analysis (K-means/t-SNE)
+    participant Label as Labeling Strategy
+    participant Model as YOLOv8
+    participant XAI as XAI (Grad-CAM)
+
+    Data->>Unsup: 1. 데이터 분포 분석
+    Unsup-->>Data: 군집 중첩 확인 (구분 어려움)
+    
+    Note over Data, Model: 지도 학습 (YOLOv8) 도입
+    
+    Label->>Model: 2. [초기] 전체 영역(Full Body) 학습
+    Model-->>XAI: 낮은 신뢰도 (0.4 ~ 0.5)
+    XAI-->>Label: 원인 분석 (배경/노이즈에 집중됨)
+    
+    Label->>Model: 3. [개선] 핵심 특징(Key Feature) 학습
+    Model-->>Data: 분류 성공 및 신뢰도 향상 (0.6 ~ 0.7)
+
+## 파일 구조
+
+dataset
+         train           images  labels
+         val             images  labels
+         test             images  labels
+         data.yaml
+
+
+
+
+
+
+
+
+
 ## 📋 Phase 1: 비지도 학습을 이용한 데이터 탐색
 
 초기 단계에서는 모델이 정답 없이 스스로 데이터의 특징을 잡아낼 수 있는지 분석.
