@@ -17,40 +17,47 @@
 | **Labeling Tool** | **LabelImg** | 바운딩 박스 기반의 학습 데이터셋 라벨링 수행 |
 
 ## 파이프라인
-mermaid
+
+```mermaid
 sequenceDiagram
     participant Data as Image Data
-    participant Unsup as Analysis (K-means/t-SNE)
-    participant Label as Labeling Strategy
+    participant Unsup as Unsupervised (K-means)
+    participant Label as Labeling 
     participant Model as YOLOv8
-    participant XAI as XAI (Grad-CAM)
+    participant XAI as Grad-CAM (XAI)
 
-    Data->>Unsup: 1. 데이터 분포 분석
-    Unsup-->>Data: 군집 중첩 확인 (구분 어려움)
+    Data->>Unsup: 1. 클러스터링
+    Unsup-->>Data: 군집 분포 확인 
     
-    Note over Data, Model: 지도 학습 (YOLOv8) 도입
+    Note over Data, Model: 지도 학습으로 전환 
     
-    Label->>Model: 2. [초기] 전체 영역(Full Body) 학습
-    Model-->>XAI: 낮은 신뢰도 (0.4 ~ 0.5)
-    XAI-->>Label: 원인 분석 (배경/노이즈에 집중됨)
+    Label->>Model: 2. 1차 전체 영역 학습
+    Model-->>XAI: 낮은 신뢰도 (0.4 ~ 0.5) 발생
+    XAI-->>Label: 오학습 원인 분석 (배경 노이즈)
     
-    Label->>Model: 3. [개선] 핵심 특징(Key Feature) 학습
+    Label->>Model: 3. 2차 특징점 중심 학습
     Model-->>Data: 분류 성공 및 신뢰도 향상 (0.6 ~ 0.7)
+```
+
 
 ## 파일 구조
 
-dataset
-         train           images  labels
-         val             images  labels
-         test             images  labels
-         data.yaml
+```text
+dataset/
+├── train/
+│   ├── images/
+│   └── labels/
+├── val/
+│   ├── images/
+│   └── labels/
+├── test/
+│   ├── images/
+│   └── labels/
+└── data.yaml
+```
 
 
-
-
-
-
-
+**데이터셋 (Train: 50장, Valid: 12장, Test:6장)**
 
 
 ## 📋 Phase 1: 비지도 학습을 이용한 데이터 탐색
@@ -58,13 +65,13 @@ dataset
 초기 단계에서는 모델이 정답 없이 스스로 데이터의 특징을 잡아낼 수 있는지 분석.
 
 - **주요 작업**
-    - **Feature Extraction:** 사전 학습된 **ResNet50**을 활용해 부품의 고차원 특징 추출.
-    - **Visualization:** **t-SNE** 기법으로 특징들을 2차원 공간에 펼쳐 데이터의 분포를 확인.
-    - **Clustering:** **K-means** 알고리즘으로 군집화 수행.
-
+  - ResNet50을 활용해 고차원 특징 추출
+  - t-SNE로 차원 축소 및 분포 시각화
+  - K-means로 군집화 수행
 ### **🔍 문제 발견**
 
 - 시각화 결과, 두 군집이 명확하게 나뉘지 않고 **중앙 부분에서 데이터들이 서로 겹쳐있는** 현상 확인.
+  
 
 ## 📋 Phase 2: 지도 학습 도입과 시행착오
 
@@ -83,7 +90,8 @@ dataset
 - 배경을 제거하더라도 제품 외형이 거의 같아서 모델이 클래스를 결정할만한 핵심적인 차이점을 잘 잡아내지 못한다고 판단.
 - **모델의 판단 근거 불명확 문제 인지**
     - 단순히 지표만으로는 모델이 실제로 무엇을 근거로 판단하는지 명확하게 알 수 없어서, 어떤 특징을 보고 판단했는지 시각화 할 필요를 느낌.
-- 전체 데이터 양도 충분하지 않아 학습을 반복해도 성능 향상에 한계가 있었고, 에폭을 늘렸더니 오히려 혼란이 더 심해지는 현상이 발생.  **데이터셋 (Train: 50장, Valid: 12장, Test:6장)**
+- 전체 데이터 양도 충분하지 않아 학습을 반복해도 성능 향상에 한계가 있었고, 에폭을 늘렸더니 오히려 혼란이 더 심해지는 현상이 발생. 
+  
 
 ## 📋 Phase 3: 라벨링 전략 변경으로 성능 개선
 
@@ -102,7 +110,7 @@ dataset
 - **신뢰도:** 클래스 분류는 잘 수행하였으나, 평균 신뢰도가 **약 60~70% 정도로 여전히 낮은 수준에 머무름을 확인.**
 - **Grad-CAM** 시각화 결과, 모델이 정답 영역이 아닌 **배경이나 그림자 부분**을 보고 예측을 진행하고 있음을 확인.
 
-### 📦 **프로젝트 마무리에 대한 나의 생각.**
+### 📦 **프로젝트 마무리에 대한 나의 생각.** 회고 및 한계점
 
 본 프로젝트서는 분류 자체는 가능했지만, 전체 정확도와 신뢰도가 약 60~70% 수준에서 정체되는 한계를 경험했습니다. 
 
